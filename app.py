@@ -64,9 +64,22 @@ def get_stages():
 
 @app.get("/api/artists/<int:artist_id>/events")
 def get_artist_events(artist_id):
-    # TODO FI: palauta artistin esiintymiset: event_id, day, stage, starts. Tuntematon id → 404.
-    # TODO EN: return the artist's performances: event_id, day, stage, starts. Unknown id → 404.
-    return jsonify(error="not implemented"), 501
+    conn = get_db()
+    artist = conn.execute("SELECT 1 FROM Artist WHERE artist_id = ?", (artist_id,)).fetchone()
+    if artist is None:
+        conn.close()
+        return jsonify(error=f"artist {artist_id} not found"), 404
+    rows = conn.execute("""
+        SELECT e.event_id, d.date AS day, s.name AS stage, e.start_dt AS starts
+        FROM Event e
+        JOIN Day d        USING(day_id)
+        JOIN Stage s      USING(stage_id)
+        JOIN EventType et USING(event_type_id)
+        WHERE e.artist_id = ? AND et.code = 'PERFORMANCE'
+        ORDER BY e.start_dt
+    """, (artist_id,)).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
 
 
 @app.get("/api/timetable")
