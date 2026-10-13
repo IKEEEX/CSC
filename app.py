@@ -126,18 +126,16 @@ def create_event():
         if not isinstance(body[f], int) or isinstance(body[f], bool):
             return jsonify(error=f"{f} must be an integer"), 400
 
-    # FI: Kannassa on sekä muotoa 'YYYY-MM-DD HH:MM' että 'YYYY-MM-DD HH:MM:SS'.
+    # FI: Käytä kannan aikaleimamuotoa YYYY-MM-DD HH:MM:SS.
     start_dt = body["start_dt"]
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
-        try:
-            start = datetime.strptime(str(start_dt), fmt)
-            break
-        except ValueError:
-            continue
-    else:
-        return jsonify(error="start_dt must be in format YYYY-MM-DD HH:MM[:SS]"), 400
+    fmt = "%Y-%m-%d %H:%M:%S"
+    try:
+        start = datetime.strptime(start_dt, fmt)
+    except (TypeError, ValueError):
+        return jsonify(error="start_dt must be in format YYYY-MM-DD HH:MM:SS"), 400
 
     duration_min = 45
+    start_dt = start.strftime(fmt)
     end_dt = (start + timedelta(minutes=duration_min)).strftime(fmt)
 
     conn = get_db()
@@ -162,7 +160,7 @@ def create_event():
         conn.close()
 
     return jsonify(event_id=cur.lastrowid, artist_id=body["artist_id"], stage_id=body["stage_id"],
-                   day_id=body["day_id"], event_type="PERFORMANCE", start_dt=start_dt,
+                   day_id=body["day_id"], event_type="keikka", start_dt=start_dt,
                    end_dt=end_dt, duration_min=duration_min), 201
 
 
